@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+lazyOfAPI/OpenFrpAPI.py
+lazyOfAPI/__init__.py
+lazyOfAPI.egg-info/PKG-INFO
+lazyOfAPI.egg-info/SOURCES.txt
+lazyOfAPI.egg-info/dependency_links.txt
+lazyOfAPI.egg-info/requires.txt
+lazyOfAPI.egg-info/top_level.txt
