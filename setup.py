@@ -7,7 +7,7 @@ setup(
     author="MojaveHao",
     author_email="HTTcode2020@126.com",
     name='lazyOfAPI',
-    version='0.0.2',
+    version='0.0.3',
     license="AGPLv3",
     packages=find_packages(),
     install_requires=[

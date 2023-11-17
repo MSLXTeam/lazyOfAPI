@@ -40,17 +40,19 @@ def generate_random_string(length=10) -> str:
 
 
 class OpenFrpAPI:
-    def __init__(self, base_url: str = "https://of-dev-api.bfsea.xyz") -> None:
+    def __init__(self, base_url: str = "https://of-dev-api.bfsea.xyz",
+                 oauth_url: str = "https://openid.17a.icu/api") -> None:
         """初始化OpenFrpAPI类"""
         self.base_url = base_url
+        self.oauth_url = oauth_url
         self.headers: Dict[str, str] = {}
         self.session: str = ""
         self.info: str = ""
+        self.code: str = ""
         self.proxy: Optional[Dict[str, str]] = None
 
-    def login(self, username: str, password: str) -> bool:
-        """用户登录"""
-        url = self.base_url + "/user/login"
+    def oauth_login_callback(self, username: str, password: str) -> bool:
+        url = self.oauth_url + "/public/login"
         data = {"username": username, "password": password}
         response = requests.post(url, data=data, proxies=self.proxy)
         result = response.json()
@@ -59,6 +61,35 @@ class OpenFrpAPI:
             self.session = result["data"]
             return True
         return False
+
+    def oauth_get_code(self) -> bool:
+        url = self.oauth_url + ("/oauth2/authorize?response_type=code&redirect_uri=http:%2F%2Fconsole.openfrp.net"
+                                "%2Foauth_callback&client_id=openfrp")
+        response = requests.post(url, proxies=self.proxy)
+        result = response.json()
+        if result["flag"]:
+            self.code = result.get("code")
+            return True
+        return False
+
+    def oauth_code_login(self) -> bool:
+        if self.code != "":
+            url = self.oauth_url + f"oauth2/callback?code={self.code}"
+            response = requests.post(url, proxies=self.proxy)
+            result = response.json()
+            if result["flag"]:
+                self.headers['Authorization'] = response.headers['Authorization']
+                self.session = result["data"]
+                return True
+            return False
+        else:
+            return False
+
+    def login(self, username: str, password: str) -> bool:
+        """用户登录"""
+        self.oauth_login_callback(username, password)
+        self.oauth_get_code()
+        return self.oauth_code_login()
 
     def get_user_info(self) -> str:
         """获取用户信息"""
@@ -129,7 +160,7 @@ class OpenFrpAPI:
         try:
             self.new_proxy(node_id, name, protocol_type, local_addr, local_port, remote_port, **kwargs)
             usr_proxies = self.get_user_proxies()
-            list_proxies = getattr(usr_proxies,"list")
+            list_proxies = getattr(usr_proxies, "list")
             for item in list_proxies:
                 if getattr(item, "proxyName") == name:
                     return {name: getattr(item, "id")}
@@ -141,7 +172,7 @@ class OpenFrpAPI:
         url = self.base_url + "/frp/api/removeProxy"
         data = {"session": self.session, "proxy_id": proxy_id}
         response = requests.post(url, data=data, headers=self.headers, proxies=self.proxy)
-        return getattr(DynamicClass(response.json()),"flag")
+        return getattr(DynamicClass(response.json()), "flag")
 
     def get_node_list(self) -> DynamicClass:
         """获取节点列表"""
@@ -156,7 +187,7 @@ class OpenFrpAPI:
         response = requests.post(url, data=data, headers=self.headers, proxies=self.proxy)
         return getattr(DynamicClass(response.json()), "flag")
 
-    def sign(self) -> Union[str,bool]:
+    def sign(self) -> Union[str, bool]:
         """用户签到"""
         url = self.base_url + "/frp/api/userSign"
         response = requests.post(url, headers=self.headers, proxies=self.proxy)
